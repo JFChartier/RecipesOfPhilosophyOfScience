@@ -1,0 +1,175 @@
+---
+title: "BuildMatrixArticleAndTopic"
+author: "Jean-Francois Chartier"
+date: "25 octobre 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Get Data
+
+
+```{r}
+
+matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
+
+fileTopicSentence = "C:/Users/Chartier/Google Drive/Ordinateur/Projet JSTOR/Analyses/Davide's data/phrase_topic/phrase_topic.csv"
+matrixSentenceTopic = data.table::fread(fileTopicSentence, header=T, sep = ",", encoding = "UTF-8")
+matrixSentenceTopic$V1=NULL
+
+matrixSentenceTopic=as.matrix(matrixSentenceTopic)[,matrixTopicLabels$retained=="yes"]
+```
+
+#Dichotomize Topic in sentence
+```{r}
+# function to get mode
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+#matrixSentenceTopicDicho = matrixSentenceTopic
+matrixSentenceTopicDicho=apply(matrixSentenceTopic, MARGIN = 1, FUN = function(x){
+    mode=getmode(x)
+    sapply(x, function(y) {ifelse(test = (y<=mode), yes = 0, no = y)})
+  })
+
+matrixSentenceTopicDicho=t(matrixSentenceTopicDicho)
+colnames(matrixSentenceTopicDicho)=matrixTopicLabels$Label[matrixTopicLabels$retained=="yes"]
+saveRDS(matrixSentenceTopicDicho, "matrixSentenceTopicDicho.rds")  
+```
+
+#Get corpus
+```{r}
+fileArt2<-"D:/CIRST/Malaterre/03_Corpus_complet-LEMMA-Date-Author-2017-12-24-sans-lignes-vides/03_Corpus_complet-LEMMA-Date-Author-2017-12-24-sans-lignes-vides.csv"
+corpusF<-data.table::fread(fileArt2,header=TRUE,sep = ",", encoding = "UTF-8")
+
+```
+
+#create datafrane of info about documents
+paste corpus name with id segment
+```{r}
+library(magrittr)
+idDocBySeg=paste0(corpusF$Corpus, corpusF$Segm_n)
+uniqueDocId=unique(idDocBySeg)
+
+article.info.df=data.frame(idDoc=unique(uniqueDocId), authors=character(length(uniqueDocId)), date=integer(length(uniqueDocId)), corpus=character(length(uniqueDocId)), title=character(length(uniqueDocId)))
+
+corpusByDoc=sapply(uniqueDocId, FUN = function(x){
+  corpusF$Corpus[idDocBySeg==x] %>% extract(., 1)
+  #idDocBySeg%>%subset(., idDocBySeg==x) %>% unique(.)
+})
+
+dateByDoc=sapply(uniqueDocId, FUN = function(x){
+  corpusF$Date[idDocBySeg==x] %>% extract(., 1)
+})
+
+authorsByDoc=sapply(uniqueDocId, FUN = function(x){
+  corpusF$Author[idDocBySeg==x] %>% extract(., 1)
+})
+
+titleByDoc=sapply(uniqueDocId, FUN = function(x){
+  corpusF$Sentence[idDocBySeg==x] %>% extract(., 1)
+})
+
+article.info.df=data.frame(idDoc=uniqueDocId, authors=authorsByDoc, date=dateByDoc, corpus=corpusByDoc, title=titleByDoc)
+
+saveRDS(article.info.df, "article.info.df.rds")
+```
+
+
+#Averaging topic from dichotomized sentences 
+```{r}
+idsArticle = unique(corpusF$Segm_n)
+# create empty matrix
+matrixArtTopic<- matrix(0.0, nrow=length(idsArticle), ncol=ncol(matrixSentenceTopicDicho))
+colnames(matrixArtTopic)<-colnames(matrixSentenceTopicDicho)
+
+for (i in 1: length(idsArticle))
+{
+  a<-(idsArticle[i])
+  segmentFromA=corpusF$Segm_n==a
+  if (sum(segmentFromA)==0)
+  {
+    print(paste("no segment in this article: ", a, sep = " "))
+  }
+  #average topic weigth for every author's segment
+  else
+  {
+    #print(segmentFromA)
+    x<-matrixSentenceTopicDicho[segmentFromA,]
+    v<-colMeans(x, na.rm = F)
+    
+    matrixArtTopic[i,]<-v
+  }
+}
+#saveRDS(matrixArtTopic, "matrixArtTopicDicho.rds")
+```
+
+#Averaging topic from raw topic distribution in sentences 
+```{r}
+idsArticle = article.info.df$idDoc
+# create empty matrix
+matrixArtAverageTopic<- matrix(0.0, nrow=length(idsArticle), ncol=ncol(matrixSentenceTopic))
+colnames(matrixArtAverageTopic)<-colnames(matrixSentenceTopic)
+
+for (i in 1: length(idsArticle))
+{
+  a<-(idsArticle[i])
+  segmentFromA=idDocBySeg==a
+  #segmentFromA=corpusF$Segm_n==a
+  if (sum(segmentFromA)==0)
+  {
+    print(paste("no segment in this article: ", a, sep = " "))
+  }
+  #average topic weigth for every author's segment
+  else
+  {
+    #print(segmentFromA)
+    x<-matrixSentenceTopic[segmentFromA,]
+    v<-colMeans(x, na.rm = F)
+    
+    matrixArtAverageTopic[i,]<-v
+  }
+}
+saveRDS(matrixArtAverageTopic, "matrix4602Art126AverageTopic.rds")
+```
+
+#topic weigth over corpus
+calculated from sentences
+```{r}
+averageTopic = apply(X = matrixSentenceTopicDicho, MARGIN = 2, FUN = function(x) mean(x))
+averageTopic=data.frame(averageWeigth = averageTopic, topic=colnames(matrixSentenceTopicDicho))
+
+
+#averageTopic=averageTopic[order(averageTopic$AverageTopic, decreasing = T),]
+#plot
+library(ggplot2)
+p <-ggplot(averageTopic, aes(x=reorder (averageTopic$topic,averageTopic$averageWeigth), averageTopic$averageWeigth))
+p +geom_bar(stat = "identity", color="blue", fill="blue") + ggtitle("Average Topic Weigth")+ xlab("Topic") + ylab("Average Weigth")+ coord_flip()+theme_bw(base_size = 10)+theme(axis.text=element_text(size=5),
+        axis.title=element_text(size=10))
+```
+
+
+#topic weigth over corpus
+calculated from article
+```{r}
+averageTopic = apply(X = matrixArtTopic, MARGIN = 2, FUN = function(x) mean(x))
+averageTopic=data.frame(averageWeigth = averageTopic, topic=colnames(matrixArtTopic))
+
+barplot(height = averageTopic$averageWeigth, horiz = T, names.arg = averageTopic$topic)
+
+
+#averageTopic=averageTopic[order(averageTopic$AverageTopic, decreasing = T),]
+#plot
+library(ggplot2)
+ggplot(averageTopic, aes(x=reorder (averageTopic$topic,averageTopic$averageWeigth), averageTopic$averageWeigth))+
+  geom_bar(stat = "identity", color="blue", fill="blue") +
+  ggtitle("Average Topic Weigth")+ xlab("Topic") + ylab("Average Weigth")+ 
+  coord_flip()+theme_bw(base_size = 10)+
+  theme(axis.text=element_text(size=5),axis.title=element_text(size=10))
+```

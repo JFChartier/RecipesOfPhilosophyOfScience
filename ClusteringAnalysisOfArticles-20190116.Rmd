@@ -1,0 +1,216 @@
+---
+title: "ClusteringAnalysisOfArticles"
+author: "Jean-Francois Chartier"
+date: "12 novembre 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#libraries
+```{r}
+library(magrittr)
+library(Rtsne)
+library(ggplot2)
+```
+
+
+#fonction pour normer les vecteurs
+```{r}
+normerVecteur <- function(x) 
+{
+  if(sum(x)==0)
+    return (x)
+  else 
+    return (x / sqrt(sum(x^2)))
+  
+}
+
+normalizeZeroOne<-function(x){
+  normalized = (x-min(x))/(max(x)-min(x))
+}
+
+
+
+#fonction pour récupérer les k mots les plus associés à chaque thème
+
+k_most_important_features_par_cluster<-function(k, matrice_mot_topic)
+{
+  kMotPlusSimil<- matrix("", nrow=k, ncol=ncol(matrice_mot_topic)*2)
+  
+  titres=vector(length=ncol(matrice_mot_topic)*2)
+  j=0
+  for (i in 1: ncol(matrice_mot_topic))
+  {
+    j=j+2
+    name_i=colnames(matrice_mot_topic)[i]
+    #titres[j-1]=paste("cluster ",i)
+    titres[j-1]=paste("topics of cluster ",name_i)
+    
+    motsTries=order(matrice_mot_topic[,i], decreasing = T)
+    mots=rownames(matrice_mot_topic)[motsTries[1:k]]
+    kMotPlusSimil[,j-1]=mots
+    
+    
+    titres[j]="weight"
+    kMotPlusSimil[,j]=round(matrice_mot_topic[motsTries[1:k],i], 4)
+    #kMotPlusSimil[,j]=matrice_mot_topic[motsTries[1:k],i]
+  }
+  colnames(kMotPlusSimil)=titres
+  kMotPlusSimil
+}
+
+#set colors by category
+
+library(RColorBrewer)
+library(magrittr)
+
+setColorsPalette17<-function(categories){
+  n <- length(unique(categories))
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  #by selectin id 2 and 5, we subset palette Dark2 and Pastel2
+  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors[c(2,4,5)], rownames(qual_col_pals[c(2,4,5),]))) %>% unique()
+  col_vector=col_vector[1: n]
+  uniqueCat=unique(categories)
+  colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+  return(colorOfTopic)
+}
+
+
+
+```
+
+#Read article*topic matrix
+```{r}
+#matrixArtTopicDicho=readRDS("matrixArtTopicDicho.rds")
+#read matrix Pr(topic|article)
+#matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
+matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
+
+#read topic names and category labels
+matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
+
+#unit vector norm
+matrixArtAndTopicNorm <- (t(apply(matrixArtAndTopic, MARGIN = 1, FUN = function(x) normerVecteur(x))))
+```
+
+#SVD
+```{r}
+svdOfDoc=RSpectra::svds(matrixArtAndTopicNorm, 50)
+reducedSVDDoc=svdOfDoc$u %*% solve(diag((svdOfDoc$d)))
+plot(reducedSVDDoc[,1:2])
+
+```
+
+#t-SNE
+```{r}
+library(Rtsne)
+set.seed(9)
+
+#incredible tse!
+tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k= Rtsne(reducedSVDDoc[,1:15], check_duplicates=FALSE, pca=F,perplexity=50, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=12, stop_lying_iter=40000, max_iter=150000)
+
+saveRDS(tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k,paste0("tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k.", Sys.Date(),".rds"))
+
+ggplot2::qplot(tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k$Y[,1], tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k$Y[,2],main = "t-Distributed Stochastic Neighbor Embedding of document space", xlab = "Dimension x", ylab = "Dimension y")
+
+```
+
+
+
+#evaluate kmeans
+```{r}
+library(clValid)
+set.seed(1)
+
+intern <- clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="internal", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
+summary(intern)
+optimalScores(intern)
+plot(intern@measures[3,,1])
+
+stability.cluster=clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="stability", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
+summary(stability.cluster)
+optimalScores(stability.cluster)
+plot(stability.cluster@measures[4,,1])
+```
+
+
+
+#kmean on full space
+```{r}
+
+tseResult = readRDS("tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k.2019-01-16.rds")
+
+#best result with k=17
+set.seed(123)
+kmeanDocModel=kmeans(reducedSVDDoc[,1:15], centers = 17, nstart = 500, iter.max = 500)
+
+saveRDS(kmeanDocModel, paste0("bestKmeanDocModelOnSVDSpace", Sys.Date(), ".rds"))
+
+ggplot2::ggplot(data.frame(x=tseResult$Y[,1], y=tseResult$Y[,2], Category=as.character(kmeanDocModel$cluster)), aes(x=x, y=y, color=Category)) +
+  geom_point(size = I(2),alpha = 0.8)+
+  scale_color_manual(name="clusters", values=c(setColorsPalette17(as.character(kmeanDocModel$cluster))))+
+  labs(subtitle="Colors indicate clusters find with k-means", title="t-Distributed Stochastic Neighbor Embedding of document space", x ="Embedding x", y = "Embedding y")+ 
+  theme(legend.position = "bottom", legend.box = "horizontal", legend.justification = "center")
+
+
+```
+
+# get topic distribution by group of articles
+```{r}
+##create empty matrix
+matrixClusterByTopic<- matrix(0.0, nrow=length(unique(kmeanDocModel$cluster)), ncol=ncol(matrixArtAndTopicNorm))
+row.names(matrixClusterByTopic)<-unique(kmeanDocModel$cluster)
+colnames(matrixClusterByTopic)<-colnames(matrixArtAndTopicNorm)
+##
+for (i in rownames(matrixClusterByTopic))
+{
+  idA=which(kmeanDocModel$cluster==i)
+  if (length(idA)<2){
+    avgTopic=matrixArtAndTopicNorm[idA,]
+    print(i)
+  }
+  else{
+    avgTopic<-colMeans(matrixArtAndTopicNorm[idA,])
+  }
+  matrixClusterByTopic[i,]<-avgTopic
+}
+
+
+filePathTopicDistriByClusterArt = paste("C:\\Users\\Chartier\\Google Drive\\Ordinateur\\Projet JSTOR\\Analyses\\Davide's data\\phrase_topic\\AsociationRulesOverClusterArt\\matrixClusterArtByTopics", Sys.Date(), ".csv", sep = "")
+
+colnames(matrixClusterByTopic)=matrixTopicLabels$Label[matrixTopicLabels$retained=="yes"]
+write.csv(t(matrixClusterByTopic), file = paste0("matrixTopicByClusterOfArticle", Sys.Date(), ".csv"), fileEncoding="UTF-8")
+write.csv(k_most_important_features_par_cluster(15, t(matrixClusterByTopic)), file = paste0("kMostImportantTopicsByArticleCluster", Sys.Date(), ".csv"), fileEncoding="UTF-8")
+
+View(k_most_important_features_par_cluster(15, t(matrixClusterByTopic)), title = "full")
+
+```
+
+#Similarity between article and centroide cluster
+```{r}
+library(proxy)
+sim.bet.art.centroide= proxy::simil(reducedSVDDoc[,1:15], kmeanDocModel$centers, method = "cosine")
+```
+
+#retrieve top-k article by cluster
+```{r}
+article.info.df=readRDS("article.info.df.rds")
+paste.info=apply(article.info.df[,c(2,3,5)],MARGIN =1, function(x){
+  paste0(x, collapse = "; ")
+})
+
+#add title article
+rownames(sim.bet.art.centroide)= paste.info
+
+topKArt=k_most_important_features_par_cluster(50, sim.bet.art.centroide)
+
+View(topKArt, title = "similarity.between.art.and.centroide")
+
+write.csv(topKArt, file = paste0("kMostImportantArticleByCluster", Sys.Date(), ".csv"), fileEncoding="UTF-8")
+```
+

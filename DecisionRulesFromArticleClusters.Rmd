@@ -1,0 +1,134 @@
+---
+title: "DecisionRulesFromArticleClusters"
+author: "Jean-Francois Chartier"
+date: "14 janvier 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#functions
+```{r}
+normerVecteur <- function(x) 
+{
+  if(sum(x)==0)
+    return (x)
+  else 
+    return (x / sqrt(sum(x^2)))
+  
+}
+
+#function written by : https://stackoverflow.com/questions/2018178/finding-the-best-trade-off-point-on-a-curve
+elbow_finder <- function(x_values, y_values) {
+  # Max values to create line
+  max_x_x <- max(x_values)
+  max_x_y <- y_values[which.max(x_values)]
+  max_y_y <- max(y_values)
+  max_y_x <- x_values[which.max(y_values)]
+  max_df <- data.frame(x = c(max_y_x, max_x_x), y = c(max_y_y, max_x_y))
+
+  # Creating straight line between the max values
+  fit <- lm(max_df$y ~ max_df$x)
+
+  # Distance from point to line
+  distances <- c()
+  for(i in 1:length(x_values)) {
+    distances <- c(distances, abs(coef(fit)[2]*x_values[i] - y_values[i] + coef(fit)[1]) / sqrt(coef(fit)[2]^2 + 1^2))
+  }
+
+  # Max distance point
+  x_max_dist <- x_values[which.max(distances)]
+  y_max_dist <- y_values[which.max(distances)]
+
+  return(c(x_max_dist, y_max_dist))
+  #a return that includes the fit
+  #return(list("x_max_dist"=x_max_dist, "y_max_dist"=y_max_dist, "fit"=fit))
+}
+```
+
+
+#get data
+```{r}
+#matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
+matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
+#unit vector norm
+matrixArtAndTopicNorm <- (t(apply(matrixArtAndTopic, MARGIN = 1, FUN = function(x) normerVecteur(x))))
+#read topic names and category labels
+matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
+
+kmeanDocModel=readRDS("bestKmeanDocModel.rds")
+
+
+```
+
+#Discretize article*Topic matrix
+use elbow method
+```{r}
+matrixArtAndTopicDiscr=t(apply(X = matrixArtAndTopicNorm, MARGIN = 1, FUN = function(v) {
+  rank=order(v, decreasing = T)
+  xy=elbow_finder(1:length(v), v[rank])
+  v>xy[2]
+}))
+
+#rpart can't take long colnames, so use only topic names
+colnames(matrixArtAndTopicDiscr)=matrixTopicLabels$Topic[matrixTopicLabels$retained=="yes"]
+```
+
+
+
+###Decision tree with RPart
+```{r}
+library(caret)
+library(rpart)
+library(magrittr)
+library(rpart.plot)
+
+ArtAndTopicDiscr.df=as.data.frame(matrixArtAndTopicDiscr)
+#encode as string
+ArtAndTopicDiscr.df=lapply(ArtAndTopicDiscr.df, function(x) as.character(x))%>%as.data.frame(., stringsAsFactors=F)%>%set_colnames(., colnames(matrixArtAndTopicDiscr))
+
+ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
+
+
+rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=20, maxdepth=30, cp = .005), parms = list(split="information"))
+#rpartTree$variable.importance
+
+my.colors=c(setColorsPalette17(as.character(ArtAndTopicDiscr.df$cluster)))
+
+rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 5, extra = 8, clip.right.labs=T, branch=1, fallen.leaves =T, add.labs=T, legend.x=NA,tweak=2, compress=F,ycompress = FALSE, nn.space=.0, space =0, gap=0, uniform=F)
+
+
+rules.set=rpart.rules(rpartTree, cover = TRUE, style = "tall")
+
+plot(rpartTree, compress = T)
+text(rpartTree, use.n = F)
+
+tree.pred=predict(rpartTree, newdata = ArtAndTopicDiscr.df, type="class")
+eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
+eval
+
+
+```
+
+#rule with part in weka
+```{r}
+library(RWeka)
+ArtAndTopicDiscr.df=as.data.frame(matrixArtAndTopicDiscr)
+#encode as string
+ArtAndTopicDiscr.df=lapply(ArtAndTopicDiscr.df, function(x) as.factor(x))%>%as.data.frame(., stringsAsFactors=F)%>%set_colnames(., colnames(matrixArtAndTopicDiscr))
+
+ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
+
+fit.part.weka<-PART(cluster ~ ., data = ArtAndTopicDiscr.df, control = Weka_control(M = 50))
+
+tree.pred=predict(fit.part.weka, newdata = ArtAndTopicDiscr.df, type="class")
+eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
+eval
+
+print(fit.part.weka)
+```
+
