@@ -1,0 +1,201 @@
+﻿Topic ID,Topic,Category,Category ID,Label,retained
+0,Measure-probability-confirmation,Epistemology,M,M0_Measure-probability-confirmation_(Epistemology),yes
+1,Code,Publishing,Z,Z1_Code_(Publishing),no
+2,Economy,Social sciences,K,K2_Economy_(Social sciences),yes
+3,Space-time,Metaphysics,P,P3_Space-time_(Metaphysics),yes
+4,Realism,Metaphysics,P,P4_Realism_(Metaphysics),yes
+5,Natural-kinds,Metaphysics,P,P5_Natural-kinds_(Metaphysics),yes
+6,Evolutionary-games,Biology,H,H6_Evolutionary-games_(Biology),yes
+7,"Say, thing, mean",Publishing,Z,"Z7_Say, thing, mean_(Publishing)",no
+8,Quantum-mechanics,Physics,D,D8_Quantum-mechanics_(Physics),yes
+9,Neuroscience,Mind,I,I9_Neuroscience_(Mind),yes
+10,Induction,Epistemology,M,M10_Induction_(Epistemology),yes
+11,Truth,Logic,B,B11_Truth_(Logic),yes
+12,Adaptation,Biology,H,H12_Adaptation_(Biology),yes
+13,Laws-of-nature,Metaphysics,P,P13_Laws-of-nature_(Metaphysics),yes
+14,Stop words,Publishing,Z,Z14_Stop words_(Publishing),no
+15,Class-set,Jargon,Y,Y15_Class-set_(Jargon),no
+16,Intentionality,Mind,I,I16_Intentionality_(Mind),yes
+17,Probabilities,Epistemology,M,M17_Probabilities_(Epistemology),yes
+18,Problem-question,Jargon,Y,Y18_Problem-question_(Jargon),no
+19,Relativity,Physics,D,D19_Relativity_(Physics),yes
+20,Proposition-consistency,Logic,B,B20_Proposition-consistency_(Logic),yes
+21,Philosophical-schools,Varia,L,L21_Philosophical-schools_(Varia),yes
+22,Social-science,Social sciences,K,K22_Social-science_(Social sciences),yes
+23,Numericals,Publishing,Z,Z23_Numericals_(Publishing),no
+24,Clear,Jargon,Y,Y24_Clear_(Jargon),no
+25,Differences,Jargon,Y,Y25_Differences_(Jargon),no
+26,Mathematical-equations,Mathematics,C,C26_Mathematical-equations_(Mathematics),yes
+27,Remaining-question,Jargon,Y,Y27_Remaining-question_(Jargon),no
+28,Life-consciousness-emotions,Biology,H,H28_Life-consciousness-emotions_(Biology),yes
+29,"Letters, numbers",Publishing,Z,"Z29_Letters, numbers_(Publishing)",no
+30,Thesis,Jargon,Y,Y30_Thesis_(Jargon),no
+31,Teleology,Biology,H,H31_Teleology_(Biology),yes
+32,Causal-process,Metaphysics,P,P32_Causal-process_(Metaphysics),yes
+33,Kuhn,Scientific inquiry,N,N33_Kuhn_(Scientific inquiry),yes
+34,Difficult-easy,Jargon,Y,Y34_Difficult-easy_(Jargon),no
+35,Science-studies,Varia,L,L35_Science-studies_(Varia),yes
+36,Discovery-heuristics,Scientific inquiry,N,N36_Discovery-heuristics_(Scientific inquiry),yes
+37,Jargon,Publishing,Z,Z37_Jargon_(Publishing),no
+38,Causal-relation,Metaphysics,P,P38_Causal-relation_(Metaphysics),yes
+39,Justification,Epistemology,M,M39_Justification_(Epistemology),yes
+40,Type-token-kinds,Metaphysics,P,P40_Type-token-kinds_(Metaphysics),yes
+41,Space-geometry,Metaphysics,P,P41_Space-geometry_(Metaphysics),yes
+42,Argument-objection,Jargon,Y,Y42_Argument-objection_(Jargon),no
+43,Observation,Theory,O,O43_Observation_(Theory),yes
+44,"Right, wrong",Jargon,Y,"Y44_Right, wrong_(Jargon)",no
+45,Modal-logic,Logic,B,B45_Modal-logic_(Logic),yes
+46,"Strong, weak",Jargon,Y,"Y46_Strong, weak_(Jargon)",no
+47,Interpretation,Theory,O,O47_Interpretation_(Theory),yes
+48,Bets-odds,Epistemology,M,M48_Bets-odds_(Epistemology),yes
+49,Definition,Language,A,A49_Definition_(Language),yes
+50,Science-and-values,Varia,L,L50_Science-and-values_(Varia),yes
+51,Patterns-structures,Varia,L,L51_Patterns-structures_(Varia),yes
+52,Discovery-replacement,Theory,O,O52_Discovery-replacement_(Theory),yes
+53,Ordering,Publishing,Z,Z53_Ordering_(Publishing),no
+54,Assumption,Theory,O,O54_Assumption_(Theory),yes
+55,Thermodynamics-Entropy,Physics,D,D55_Thermodynamics-Entropy_(Physics),yes
+56,Neurosciences,Mind,I,I56_Neurosciences_(Mind),yes
+57,Experiment,Theory,O,O57_Experiment_(Theory),yes
+58,Example,Publishing,Z,Z58_Example_(Publishing),no
+59,Error-risk,Epistemology,M,M59_Error-risk_(Epistemology),yes
+60,Test-hypothesis,Epistemology,M,M60_Test-hypothesis_(Epistemology),yes
+61,Clear,Jargon,Y,Y61_Clear_(Jargon),no
+62,Research-work-program,Scientific inquiry,N,N62_Research-work-program_(Scientific inquiry),yes
+63,"Notion, concept",Jargon,Y,"Y63_Notion, concept_(Jargon)",no
+64,Time period,Publishing,Z,Z64_Time period_(Publishing),no
+65,Probability-chance,Epistemology,M,M65_Probability-chance_(Epistemology),yes
+66,"Point, view",Jargon,Y,"Y66_Point, view_(Jargon)",no
+67,Electromagnetism,Physics,D,D67_Electromagnetism_(Physics),yes
+68,Domain,Jargon,Y,Y68_Domain_(Jargon),no
+69,"Issue, question",Jargon,Y,"Y69_Issue, question_(Jargon)",no
+70,Celestial-mechanics,Physics,D,D70_Celestial-mechanics_(Physics),yes
+71,Change,Jargon,Y,Y71_Change_(Jargon),no
+72,Prediction,Theory,O,O72_Prediction_(Theory),yes
+73,Thermodynamics-Perfect-gases,Physics,D,D73_Thermodynamics-Perfect-gases_(Physics),yes
+74,Importance,Jargon,Y,Y74_Importance_(Jargon),no
+75,"Philosophers, scientists",Jargon,Y,"Y75_Philosophers, scientists_(Jargon)",no
+76,Stop words,Publishing,Z,Z76_Stop words_(Publishing),no
+77,"Philosophy, association",Publishing,Z,"Z77_Philosophy, association_(Publishing)",no
+78,"University, department",Publishing,Z,"Z78_University, department_(Publishing)",no
+79,Analysis,Jargon,Y,Y79_Analysis_(Jargon),no
+80,Stability,"Systems, complexity",F,"F80_Stability_(Systems, complexity)",yes
+81,Natural-selection,Biology,H,H81_Natural-selection_(Biology),yes
+82,Time-event,Metaphysics,P,P82_Time-event_(Metaphysics),yes
+83,Evidence,Epistemology,M,M83_Evidence_(Epistemology),yes
+84,Speak,Publishing,Z,Z84_Speak_(Publishing),no
+85,"Goal, paper objectives",Jargon,Y,"Y85_Goal, paper objectives_(Jargon)",no
+86,Term-meaning,Language,A,A86_Term-meaning_(Language),yes
+87,"Argument, account",Jargon,Y,"Y87_Argument, account_(Jargon)",no
+88,Jargon,Jargon,Y,Y88_Jargon_(Jargon),no
+89,Entity,Metaphysics,P,P89_Entity_(Metaphysics),yes
+90,Example,Publishing,Z,Z90_Example_(Publishing),no
+91,Structure-model,Theory,O,O91_Structure-model_(Theory),yes
+92,Mathematics-in-science,Mathematics,C,C92_Mathematics-in-science_(Mathematics),yes
+93,Species,Biology,H,H93_Species_(Biology),yes
+94,"Problem, difficult",Jargon,Y,"Y94_Problem, difficult_(Jargon)",no
+95,Belief-degree,Epistemology,M,M95_Belief-degree_(Epistemology),yes
+96,Relationship,Jargon,Y,Y96_Relationship_(Jargon),no
+97,Justification-reasons,Epistemology,M,M97_Justification-reasons_(Epistemology),yes
+98,"Paper, notes, acknowledgments",Publishing,Z,"Z98_Paper, notes, acknowledgments_(Publishing)",no
+99,Color-Goodman,Epistemology,M,M99_Color-Goodman_(Epistemology),yes
+100,Modeling,"Models, simulation",E,"E100_Modeling_(Models, simulation)",yes
+101,Therapy,Mind,I,I101_Therapy_(Mind),yes
+102,"Consider, suppose",Jargon,Y,"Y102_Consider, suppose_(Jargon)",no
+103,"Man, nature",Jargon,Y,"Y103_Man, nature_(Jargon)",no
+104,Stop words,Publishing,Z,Z104_Stop words_(Publishing),no
+105,Boundary-conditions,"Systems, complexity",F,"F105_Boundary-conditions_(Systems, complexity)",yes
+106,Scientific-method,Scientific inquiry,N,N106_Scientific-method_(Scientific inquiry),yes
+107,Confirmation,Epistemology,M,M107_Confirmation_(Epistemology),yes
+108,"May, even",Publishing,Z,"Z108_May, even_(Publishing)",no
+109,"Condition, requirement",Jargon,Y,"Y109_Condition, requirement_(Jargon)",no
+110,Cause-effect,Metaphysics,P,P110_Cause-effect_(Metaphysics),yes
+111,"Choice, convention, decision",Jargon,Y,"Y111_Choice, convention, decision_(Jargon)",no
+112,Reductionism,Theory,O,O112_Reductionism_(Theory),yes
+113,Semantic-syntactic-accounts,Theory,O,O113_Semantic-syntactic-accounts_(Theory),yes
+114,"Book, paper",Publishing,Z,"Z114_Book, paper_(Publishing)",no
+115,Physical-principles,Physics,D,D115_Physical-principles_(Physics),yes
+116,Models-and-representation,"Models, simulation",E,"E116_Models-and-representation_(Models, simulation)",yes
+117,Complexity,"Systems, complexity",F,"F117_Complexity_(Systems, complexity)",yes
+118,Intuition,Varia,L,L118_Intuition_(Varia),yes
+119,Image-perception,Mind,I,I119_Image-perception_(Mind),yes
+120,"Number, interval, length",Jargon,Y,"Y120_Number, interval, length_(Jargon)",no
+121,Level-hierarchy,"Systems, complexity",F,"F121_Level-hierarchy_(Systems, complexity)",yes
+122,Conclusion-argument,Logic,B,B122_Conclusion-argument_(Logic),yes
+123,Variables,Mathematics,C,C123_Variables_(Mathematics),yes
+124,"Attention, focus",Jargon,Y,"Y124_Attention, focus_(Jargon)",no
+125,"Number, large, small",Jargon,Y,"Y125_Number, large, small_(Jargon)",no
+126,Aims-of-science,Varia,L,L126_Aims-of-science_(Varia),yes
+127,Knowledge,Epistemology,M,M127_Knowledge_(Epistemology),yes
+128,Stop words,Publishing,Z,Z128_Stop words_(Publishing),no
+129,Physical-reality,Metaphysics,P,P129_Physical-reality_(Metaphysics),yes
+130,See also,Publishing,Z,Z130_See also_(Publishing),no
+131,Fact,Metaphysics,P,P131_Fact_(Metaphysics),yes
+132,"Good, well",Jargon,Y,"Y132_Good, well_(Jargon)",no
+133,Disease-health,Medecine,J,J133_Disease-health_(Medecine),yes
+134,Particle-physics,Physics,D,D134_Particle-physics_(Physics),yes
+135,DN-explanation,Theory,O,O135_DN-explanation_(Theory),yes
+136,Computer-simulation,"Models, simulation",E,"E136_Computer-simulation_(Models, simulation)",yes
+137,Stop words,Publishing,Z,Z137_Stop words_(Publishing),no
+138,Quantum-measurement,Physics,D,D138_Quantum-measurement_(Physics),yes
+139,Word-meaning,Language,A,A139_Word-meaning_(Language),yes
+140,Sentence-predicate,Logic,B,B140_Sentence-predicate_(Logic),yes
+141,Function,Biology,H,H141_Function_(Biology),yes
+142,Stop words,Publishing,Z,Z142_Stop words_(Publishing),no
+143,Data-techniques,Theory,O,O143_Data-techniques_(Theory),yes
+144,Chaos,"Systems, complexity",F,"F144_Chaos_(Systems, complexity)",yes
+145,Mereology,"Systems, complexity",F,"F145_Mereology_(Systems, complexity)",yes
+146,"Seem, plausible",Jargon,Y,"Y146_Seem, plausible_(Jargon)",no
+147,Stop words,Publishing,Z,Z147_Stop words_(Publishing),no
+148,"Always, never",Jargon,Y,"Y148_Always, never_(Jargon)",no
+149,"Particular, general",Jargon,Y,"Y149_Particular, general_(Jargon)",no
+150,Different,Jargon,Y,Y150_Different_(Jargon),no
+151,Sections,Publishing,Z,Z151_Sections_(Publishing),no
+152,Geometry,Mathematics,C,C152_Geometry_(Mathematics),yes
+153,Evaluation,Theory,O,O153_Evaluation_(Theory),yes
+154,Conditions,Logic,B,B154_Conditions_(Logic),yes
+155,Evolution,Biology,H,H155_Evolution_(Biology),yes
+156,Distinction,Jargon,Y,Y156_Distinction_(Jargon),no
+157,Property-emergence-supervenience,Metaphysics,P,P157_Property-emergence-supervenience_(Metaphysics),yes
+158,Explanation-accounts,Theory,O,O158_Explanation-accounts_(Theory),yes
+159,Explanation-description-prediction,Theory,O,O159_Explanation-description-prediction_(Theory),yes
+160,Quantum-entanglement,Physics,D,D160_Quantum-entanglement_(Physics),yes
+161,Order ,Jargon,Y,Y161_Order _(Jargon),no
+162,Examples,Jargon,Y,Y162_Examples_(Jargon),no
+163,Explanatory-power,Theory,O,O163_Explanatory-power_(Theory),yes
+164,Behavior,Mind,I,I164_Behavior_(Mind),yes
+165,"Necessity, possibility, existence",Jargon,Y,"Y165_Necessity, possibility, existence_(Jargon)",no
+166,"Man, child",Jargon,Y,"Y166_Man, child_(Jargon)",no
+167,Concept,Language,A,A167_Concept_(Language),yes
+168,Rational-choice,Epistemology,M,M168_Rational-choice_(Epistemology),yes
+169,Object-property-kind,Metaphysics,P,P169_Object-property-kind_(Metaphysics),yes
+170,Information,Varia,L,L170_Information_(Varia),yes
+171,"Distinct, separate",Jargon,Y,"Y171_Distinct, separate_(Jargon)",no
+172,"Result, obtain, yield",Jargon,Y,"Y172_Result, obtain, yield_(Jargon)",no
+173,Population-genetics,Biology,H,H173_Population-genetics_(Biology),yes
+174,Learning,Mind,I,I174_Learning_(Mind),yes
+175,"Principle, rule",Jargon,Y,"Y175_Principle, rule_(Jargon)",no
+176,Stop words,Publishing,Z,Z176_Stop words_(Publishing),no
+177,Classical-mechanics-gravitation,Physics,D,D177_Classical-mechanics-gravitation_(Physics),yes
+178,Group-selection,Biology,H,H178_Group-selection_(Biology),yes
+179,"Number, value, quantification",Jargon,Y,"Y179_Number, value, quantification_(Jargon)",no
+180,Stop words,Publishing,Z,Z180_Stop words_(Publishing),no
+181,"Thesis, claim",Jargon,Y,"Y181_Thesis, claim_(Jargon)",no
+182,Relevant-factor-causal,Metaphysics,P,P182_Relevant-factor-causal_(Metaphysics),yes
+183,Chemistry,Chemistry,G,G183_Chemistry_(Chemistry),yes
+184,Theorem-locality,Mathematics,C,C184_Theorem-locality_(Mathematics),yes
+185,Truth-synthetic,Language,A,A185_Truth-synthetic_(Language),yes
+186,Adequacy-success,Theory,O,O186_Adequacy-success_(Theory),yes
+187,State-space,Mathematics,C,C187_State-space_(Mathematics),yes
+188,Logical-axiom,Logic,B,B188_Logical-axiom_(Logic),yes
+189,Figure,Publishing,Z,Z189_Figure_(Publishing),no
+190,Cosmology,Physics,D,D190_Cosmology_(Physics),yes
+191,"Respect, note",Publishing,Z,"Z191_Respect, note_(Publishing)",no
+192,Perspective-pluralism,Varia,L,L192_Perspective-pluralism_(Varia),yes
+193,Problem-solving,Scientific inquiry,N,N193_Problem-solving_(Scientific inquiry),yes
+194,Genetics,Biology,H,H194_Genetics_(Biology),yes
+195,Psychology-cognitive,Mind,I,I195_Psychology-cognitive_(Mind),yes
+196,Set-theory,Mathematics,C,C196_Set-theory_(Mathematics),yes
+197,Mechanism-explanation,Theory,O,O197_Mechanism-explanation_(Theory),yes
+198,Linguistic-expression,Language,A,A198_Linguistic-expression_(Language),yes
+199,Perception,Mind,I,I199_Perception_(Mind),yes
