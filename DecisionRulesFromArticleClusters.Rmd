@@ -48,20 +48,36 @@ elbow_finder <- function(x_values, y_values) {
   #a return that includes the fit
   #return(list("x_max_dist"=x_max_dist, "y_max_dist"=y_max_dist, "fit"=fit))
 }
+
+library(RColorBrewer)
+library(magrittr)
+
+setColorsPaletteFor25AndLess<-function(categories){
+  n <- length(unique(categories))
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  #by selectin id 2 and 5, we subset palette Dark2 and Pastel2
+  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors[c(2,4,5)], rownames(qual_col_pals[c(2,4,5),]))) %>% unique()
+  col_vector=col_vector[1: n]
+  uniqueCat=unique(categories)
+  colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+  return(colorOfTopic)
+}
 ```
 
 
 #get data
 ```{r}
-#matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
-matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
+matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
+#matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
 #unit vector norm
 matrixArtAndTopicNorm <- (t(apply(matrixArtAndTopic, MARGIN = 1, FUN = function(x) normerVecteur(x))))
 #read topic names and category labels
 matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
 
-kmeanDocModel=readRDS("bestKmeanDocModel.rds")
+kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
 
+#rpart can't take long colnames, so use only topic names
+colnames(matrixArtAndTopic)=matrixTopicLabels$Topic[matrixTopicLabels$retained=="yes"]
 
 ```
 
@@ -79,8 +95,7 @@ colnames(matrixArtAndTopicDiscr)=matrixTopicLabels$Topic[matrixTopicLabels$retai
 ```
 
 
-
-###Decision tree with RPart
+#Decision tree on dicho data with RPart
 ```{r}
 library(caret)
 library(rpart)
@@ -94,15 +109,14 @@ ArtAndTopicDiscr.df=lapply(ArtAndTopicDiscr.df, function(x) as.character(x))%>%a
 ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
 
 
-rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=20, maxdepth=30, cp = .005), parms = list(split="information"))
-#rpartTree$variable.importance
+rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, maxcompete=1, xval=50), parms = list(split="information"))
+View(rpartTree$variable.importance)
 
-my.colors=c(setColorsPalette17(as.character(ArtAndTopicDiscr.df$cluster)))
+plotcp(rpartTree)
 
-rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 5, extra = 8, clip.right.labs=T, branch=1, fallen.leaves =T, add.labs=T, legend.x=NA,tweak=2, compress=F,ycompress = FALSE, nn.space=.0, space =0, gap=0, uniform=F)
+printcp(rpartTree)
 
-
-rules.set=rpart.rules(rpartTree, cover = TRUE, style = "tall")
+rpartTree=prune(rpartTree,cp=rpartTree$cptable[which.min(rpartTree$cptable[,4]),1])
 
 plot(rpartTree, compress = T)
 text(rpartTree, use.n = F)
@@ -110,9 +124,78 @@ text(rpartTree, use.n = F)
 tree.pred=predict(rpartTree, newdata = ArtAndTopicDiscr.df, type="class")
 eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
 eval
+#rpartTree$cptable
 
 
 ```
+
+#Decision tree on dicho data with RPart
+```{r}
+library(caret)
+library(rpart)
+library(magrittr)
+library(rpart.plot)
+
+ArtAndTopic.df=as.data.frame(matrixArtAndTopic)
+#encode as string
+#ArtAndTopic.df=lapply(ArtAndTopic.df, function(x) as.character(x))%>%as.data.frame(., stringsAsFactors=F)%>%set_colnames(., colnames(matrixArtAndTopic))
+
+ArtAndTopic.df$cluster=as.factor(kmeanDocModel$cluster)
+
+
+rpartTree <- rpart(cluster ~ ., data = ArtAndTopic.df, method = "class", control = rpart.control(minsplit=200, maxdepth=30, cp = .005), parms = list(split="gini"))
+#rpartTree$variable.importance
+
+
+plot(rpartTree, compress = T)
+text(rpartTree, use.n = F)
+
+tree.pred=predict(rpartTree, newdata = ArtAndTopic.df, type="class")
+eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopic.df$cluster, mode="everything")
+eval
+
+
+```
+
+
+#visualizing the tree
+```{r}
+my.colors=c(setColorsPaletteFor25AndLess(as.character(ArtAndTopicDiscr.df$cluster)))
+
+rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 3, extra = 8, clip.right.labs=T, branch=1, fallen.leaves =T, add.labs=T, legend.x=NA,tweak=3, compress=F,ycompress = F, nn.space=.0, space =0, yspace=0, gap=1, uniform=T, varlen=0, Margin=0, prefix="", yesno=1, left=T, branch.col = "black",  under = TRUE, branch.lty = 3, clip.facs=T, split.cex=1, split.font=1, split.yshift=0, split.yspace=2, split.space=0)
+
+rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 3, extra = 8, clip.right.labs=T, branch=1, fallen.leaves =T, add.labs=T, legend.x=NA,tweak=3, compress=F,uniform=T, Margin=0,branch.col = "black",  under = F, branch.lty = 3)
+
+rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 0, extra = 8, clip.right.labs=T, branch=1, fallen.leaves =F, add.labs=T, legend.x=NA,tweak=3, uniform=T, varlen=0, yesno=2, left=T, branch.col = "black",  under = TRUE, branch.lty = 3)
+
+rpart.plot(rpartTree, box.palette = as.list(unique(my.colors)), type = 2, extra = 8, fallen.leaves =T, legend.x=NA,compress=F,uniform=T, Margin=0,branch.col = "black",  under = F, branch.lty = 3, split.yshift=0, split.yspace=2, split.space=2, tweak=1.5)
+
+prp(rpartTree)
+
+library(rattle)	
+fancyRpartPlot(rpartTree, type=5, sub=NULL)
+```
+
+#visNetwork
+```{r}
+library(visNetwork)
+my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
+
+visNetwork::visTree(rpartTree)
+
+visTree(rpartTree, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
+
+
+
+```
+
+
+#Extract rules from tree
+```{r}
+rules.set=rpart.rules(rpartTree, cover = TRUE, style = "tall", nn=T)
+rules.set
+```
+
 
 #rule with part in weka
 ```{r}
