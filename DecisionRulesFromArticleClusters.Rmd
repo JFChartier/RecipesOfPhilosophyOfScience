@@ -130,17 +130,64 @@ x=ArtAndTopicDiscr.df[, -which(colnames(ArtAndTopicDiscr.df) == "cluster")]
 y=ArtAndTopicDiscr.df$cluster
 
 #https://stackoverflow.com/questions/36781755/how-to-specify-minbucket-in-caret-train-for
-rpart.cv.fit <- train(y = y, x = x, method = "rpart", trControl = data_ctrl,parms=list(split='information'), tuneGrid = data.frame(cp = c(min.cp, 0.001,0.005, 0.01,  0.05)), control = rpart.control(minsplit = 10, minbucket = 10))
+rpart.cv.fit <- train(y = y, x = x, method = "rpart", trControl = data_ctrl,parms=list(split='information'), tuneGrid = data.frame(cp = c(min.cp)), control = rpart.control(minsplit = 10, minbucket = 10))
 
-
-
-tree.pred=predict(rpartTree, newdata = ArtAndTopicDiscr.df, type="class")
-eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
-eval
-#rpartTree$cptable
 
 ```
 
+## Retrive full optimized tree
+```{r}
+#learn on full data with optimized parameters
+rpartTree.full <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = min.cp, xval=1), parms = list(split="information"))
+
+tree.pred=predict(rpartTree.full, newdata = ArtAndTopicDiscr.df, type="class")
+eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
+eval
+
+#predicting class probability
+tree.prob.pred=predict(rpartTree.full, newdata = ArtAndTopicDiscr.df, type="prob")%>%as.data.frame(.)
+
+```
+
+##extract rules
+```{r}
+path.rpart(rpartTree.full, nodes = 1)
+
+rules.set=rpart.rules(rpartTree.full, cover = TRUE, nn=T, style = "tallw")
+
+rules.set
+
+
+
+```
+
+
+##Compare prediction vs ref
+```{r}
+article.info.df=readRDS("article.info.df.rds")
+article.info.df$cluster.ref=kmeanDocModel$cluster
+article.info.df$cluster.pred=tree.pred
+article.info.df=cbind(article.info.df, tree.prob.pred)
+
+saveRDS(article.info.df, "article.ref.vs.prediction.df")
+write.csv(x = article.info.df, file="article.ref.vs.prediction.csv", sep = ",", fileEncoding = "UTF-8")
+```
+
+##Visualize tree
+```{r}
+library(visNetwork)
+library(shiny)
+library(colourpicker)
+library(shinyWidgets)
+my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
+
+
+treeVis=visTree(rpartTree.full, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
+
+visSave(graph = treeVis, file = "decisionTreeFromDichoMatrix.html")
+
+
+```
 
 #Decision tree on dicho data with RPart
 ```{r}
