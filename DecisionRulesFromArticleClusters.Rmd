@@ -94,8 +94,8 @@ matrixArtAndTopicDiscr=t(apply(X = matrixArtAndTopicNorm, MARGIN = 1, FUN = func
 colnames(matrixArtAndTopicDiscr)=matrixTopicLabels$Topic[matrixTopicLabels$retained=="yes"]
 ```
 
-
 #Decision tree on dicho data with RPart
+##Complexity parameter optimization
 ```{r}
 library(caret)
 library(rpart)
@@ -108,26 +108,39 @@ ArtAndTopicDiscr.df=lapply(ArtAndTopicDiscr.df, function(x) as.character(x))%>%a
 
 ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
 
-
-rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, maxcompete=1, xval=50), parms = list(split="information"))
+set.seed(123)
+rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, xval=100), parms = list(split="information"))
 View(rpartTree$variable.importance)
 
 plotcp(rpartTree)
 
-printcp(rpartTree)
+tableCP=rpartTree$cptable
 
-rpartTree=prune(rpartTree,cp=rpartTree$cptable[which.min(rpartTree$cptable[,4]),1])
+min.cp=which.min(rpartTree$cptable[,4]) %>% rpartTree$cptable[.,1]
 
-plot(rpartTree, compress = T)
-text(rpartTree, use.n = F)
+rpartTree=prune(rpartTree,cp=min.cp)
+
+```
+
+##Evaluating Rpart
+```{r}
+data_ctrl <- trainControl(method = "cv", number = 10)
+
+x=ArtAndTopicDiscr.df[, -which(colnames(ArtAndTopicDiscr.df) == "cluster")]
+y=ArtAndTopicDiscr.df$cluster
+
+#https://stackoverflow.com/questions/36781755/how-to-specify-minbucket-in-caret-train-for
+rpart.cv.fit <- train(y = y, x = x, method = "rpart", trControl = data_ctrl,parms=list(split='information'), tuneGrid = data.frame(cp = c(min.cp, 0.001,0.005, 0.01,  0.05)), control = rpart.control(minsplit = 10, minbucket = 10))
+
+
 
 tree.pred=predict(rpartTree, newdata = ArtAndTopicDiscr.df, type="class")
 eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
 eval
 #rpartTree$cptable
 
-
 ```
+
 
 #Decision tree on dicho data with RPart
 ```{r}
@@ -179,11 +192,17 @@ fancyRpartPlot(rpartTree, type=5, sub=NULL)
 #visNetwork
 ```{r}
 library(visNetwork)
+library(shiny)
+library(colourpicker)
+library(shinyWidgets)
 my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
 
-visNetwork::visTree(rpartTree)
 
-visTree(rpartTree, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
+treeVis=visTree(rpart.cv.fit$finalModel, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
+
+visSave(graph = treeVis, file = "decisionTreeFromDichoMatrix.html")
+
+#visTreeEditor(rpart.cv.fit$finalModel, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
 
 
 
