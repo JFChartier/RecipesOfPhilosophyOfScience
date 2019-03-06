@@ -1,0 +1,110 @@
+---
+title: "NetworkOfAssociationRules"
+author: "Jean-Francois Chartier"
+date: "4 mars 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Read rules of interest
+```{r}
+rules.interest=readRDS("rules.interest.96.rds")
+rules.interest.df=readRDS("rules.interest.96.df.rds")
+rules.interest.df <- rapply(rules.interest.df, function(x) as.character(x), classes="factor", how="replace")
+
+kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
+
+topic.frequency=readRDS("frequency.of.dicho.topic.rds")
+topic.frequency <- rapply(topic.frequency, function(x) as.character(x), classes="factor", how="replace")
+
+```
+
+#prepare data
+```{r}
+#convert as proportion
+topic.frequency$proportion=sapply(topic.frequency$frequency.topic, function(x){
+  (x/sum(topic.frequency$frequency.topic))
+})
+
+```
+
+
+#Plot selected rules
+based on that script: https://github.com/datastorm-open/visNetwork/issues/6
+```{r}
+library(arules)
+library(arulesViz)
+library(visNetwork)
+library(igraph)
+
+ig <- plot(rules.interest, method="graph", control=list(type="items") )
+ig_df <- get.data.frame(ig, what = "both")
+
+
+#get node type
+id.node.assoc=ifelse(ig_df$vertices$label == "",T, F)
+id.node.cluster=ig_df$vertices$label %in% unique(kmeanDocModel$cluster)
+id.node.topic= (id.node.assoc ==  id.node.cluster)
+
+#node shape
+myNodeShape = ifelse(id.node.assoc == T,"dot", "triangle")
+myNodeShape[id.node.cluster]="square"
+
+#node type as group
+node.type.as.group=rep(NA, length(ig_df$vertices$label))
+node.type.as.group[id.node.assoc]=rules.interest.df$rhs
+node.type.as.group[id.node.cluster]=ig_df$vertices$label[id.node.cluster]
+
+#set assoc node label to NA in order to simplify the graph
+ig_df$vertices$label[id.node.assoc]=NA #rules.interest.df$lhs
+
+#node size
+myNodeSize=ig_df$vertices$support
+myNodeSize[id.node.cluster]=kmeanDocModel$size/sum(kmeanDocModel$size)
+myNodeSize=myNodeSize*100
+# keep only topics present in the network
+topic.frequency=sapply(topic.frequency$topic, function(x){
+  x %in% ig_df$vertices$label[id.node.topic]
+})%>%subset(topic.frequency, .)
+#set node size of topics
+myNodeSize[id.node.topic]=topic.frequency$proportion*100
+#mySize[is.na(mySize)]=min(mySize, na.rm = T)
+
+#node value
+myNodeValue=myNodeSize
+
+#node color. set only topic node colors
+myNodeColor=NA
+myNodeColor[id.node.topic]="black"
+
+#node id
+myNodeId=ig_df$vertices$name
+
+myNodes=nodes = data.frame(id = myNodeId, title = ig_df$vertices$label, ig_df$vertices, shape=myNodeShape, group=node.type.as.group, size=myNodeSize, value=myNodeValue, color=myNodeColor) 
+
+#Edges
+
+myEdges=ig_df$edges
+#edge value as prediction accuracy
+myEdges$value=NA
+i=myNodes$id[id.node.cluster]
+selected.edge=(myEdges$to %in% i)
+#myEdges$from[selected.edge]
+myEdges$value[selected.edge]=rules.interest.df$fMesure
+
+#set id name for plot
+myNodeIdForPlot=ig_df$vertices$label
+myNodeIdForPlot[id.node.cluster]=paste0("cluster ", ig_df$vertices$label[id.node.cluster])
+myNodeIdForPlot[id.node.assoc]=paste0("rule: ", rules.interest.df$lhs)
+myNodes$node.id=myNodeIdForPlot
+#change node.id
+#myNodes$id=myNodeIdForPlot
+
+visNetwork(nodes = myNodes, edges = myEdges) %>% visEdges( arrows = "to" ) %>% visGroups() %>% visEdges(color=list("inherit"="to")) %>% visOptions( highlightNearest = T, nodesIdSelection = TRUE, selectedBy = list(variable="group"))%>%visPhysics(stabilization = FALSE)%>%visInteraction(navigationButtons = TRUE)  #%>%visNodes(size=50)
+
+```

@@ -130,6 +130,8 @@ calculated on Discretize article*Topic matrix
 frequence.topic = apply(X = matrixArtAndTopicDiscr, MARGIN = 2, FUN = function(x) sum(x))
 frequence.topic=data.frame(frequency.topic = frequence.topic, topic=colnames(matrixArtAndTopicDiscr))
 
+saveRDS(frequence.topic, "frequency.of.dicho.topic.rds")
+
 #averageTopic=averageTopic[order(averageTopic$AverageTopic, decreasing = T),]
 #plot
 library(ggplot2)
@@ -551,12 +553,15 @@ RulesPrecisionsRecallFmesure.interest=RulesPrecisionsRecallFmesure.interest[isMa
 #e=e[isMax,]
 length(rules.interest)
 
+saveRDS(rules.interest, file = "rules.interest.96.rds")
+
 rules.interest.df=inspect(rules.interest, ruleSep = "=", itemSep = " ; ", setStart = "", setEnd ="", linebreak = FALSE)
 id.rule=as(rules.interest, "data.frame")%>%rownames(.)
 
 #rules.interest.df=as(rules.interest, "data.frame")
 rules.interest.df=cbind(rules.interest.df, RulesPrecisionsRecallFmesure.interest)
 rules.interest.df$id.rule=id.rule
+saveRDS(rules.interest.df, "rules.interest.96.df.rds")
 
 write.csv(rules.interest.df, file = paste0("rules.interest.96.df.", Sys.Date(), ".csv"), fileEncoding = "UTF-8")
 
