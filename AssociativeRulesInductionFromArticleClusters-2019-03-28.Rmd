@@ -1,0 +1,561 @@
+---
+title: "AssociationRulesFromArticleClusters"
+author: "Jean-Francois Chartier"
+date: "Febuary 7 2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#import lib
+```{r}
+
+library(arulesViz)
+library(magrittr) 
+```
+
+#fonction pour normer les vecteurs
+```{r}
+
+matthewsCorr<-function(tp, tn, fp, fn){
+  return (((tp*tn)-(fp*fn))/sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
+}
+
+normerVecteur <- function(x) 
+{
+  if(sum(x)==0)
+    return (x)
+  else 
+    return (x / sqrt(sum(x^2)))
+  
+}
+
+normalizeZeroOne<-function(x){
+  normalized = (x-min(x))/(max(x)-min(x))
+}
+
+#function to get cluster size for every rule
+getClusterSizeOfEveryRule<-function(clusterSize, aprioriRules){
+  clusterSize.each.rule=vector(mode = "list", length = length(aprioriRules))
+
+  for (x in 1:length(clusterSize))
+  {
+    print(x)
+    idRuleWithconsequent=aprioriRules@rhs %in% as.character(x)
+    print(sum(idRuleWithconsequent))
+    clusterSize.each.rule[idRuleWithconsequent]=clusterSize[x]
+  }
+  return (clusterSize.each.rule=unlist(clusterSize.each.rule))
+}
+
+#function written by : https://stackoverflow.com/questions/2018178/finding-the-best-trade-off-point-on-a-curve
+elbow_finder <- function(x_values, y_values) {
+  # Max values to create line
+  max_x_x <- max(x_values)
+  max_x_y <- y_values[which.max(x_values)]
+  max_y_y <- max(y_values)
+  max_y_x <- x_values[which.max(y_values)]
+  max_df <- data.frame(x = c(max_y_x, max_x_x), y = c(max_y_y, max_x_y))
+
+  # Creating straight line between the max values
+  fit <- lm(max_df$y ~ max_df$x)
+
+  # Distance from point to line
+  distances <- c()
+  for(i in 1:length(x_values)) {
+    distances <- c(distances, abs(coef(fit)[2]*x_values[i] - y_values[i] + coef(fit)[1]) / sqrt(coef(fit)[2]^2 + 1^2))
+  }
+
+  # Max distance point
+  x_max_dist <- x_values[which.max(distances)]
+  y_max_dist <- y_values[which.max(distances)]
+
+  return(c(x_max_dist, y_max_dist))
+  #a return that includes the fit
+  #return(list("x_max_dist"=x_max_dist, "y_max_dist"=y_max_dist, "fit"=fit))
+}
+```
+
+
+#Data
+The data is a N*M matrix of N article and M topics
+```{r}
+
+#read matrix Pr(topic|article)
+matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
+#matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
+
+
+#unit vector norm
+matrixArtAndTopicNorm <- (t(apply(matrixArtAndTopic, MARGIN = 1, FUN = function(x) normerVecteur(x))))
+
+
+#read topic names and category labels
+matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
+
+#tseResult = readRDS("tsne_doc.50.expand12.norm.theta05.late20k.withSVD15.40k.rds")
+
+tseResult = readRDS("tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k.2019-01-16.rds")
+
+kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
+
+article.info.df=readRDS("article.info.df.rds")
+
+```
+
+
+#Discretize article*Topic matrix
+use elbow method
+```{r}
+matrixArtAndTopicDiscr=t(apply(X = matrixArtAndTopicNorm, MARGIN = 1, FUN = function(v) {
+  rank=order(v, decreasing = T)
+  xy=elbow_finder(1:length(v), v[rank])
+  v>xy[2]
+}))
+```
+
+#add categorie labels
+```{r}
+colnames(matrixArtAndTopicDiscr)=matrixTopicLabels$Label[matrixTopicLabels$retained=="yes"]
+```
+
+#document frequency of topic
+calculated on Discretize article*Topic matrix
+```{r}
+frequence.topic = apply(X = matrixArtAndTopicDiscr, MARGIN = 2, FUN = function(x) sum(x))
+frequence.topic=data.frame(frequency.topic = frequence.topic, topic=colnames(matrixArtAndTopicDiscr))
+
+saveRDS(frequence.topic, "frequency.of.dicho.topic.rds")
+
+#averageTopic=averageTopic[order(averageTopic$AverageTopic, decreasing = T),]
+#plot
+library(ggplot2)
+ggplot(frequence.topic, aes(x=reorder (frequence.topic$topic,frequence.topic$frequency.topic), frequence.topic$frequency.topic))+
+  geom_bar(stat = "identity", color="darkblue", fill="darkblue") +
+  ggtitle("Number of articles where a topic appears")+
+  xlab("Topics") + ylab("Number of articles")+ 
+  coord_flip()+theme_bw(base_size = 10)+
+  theme(axis.text=element_text(size=5, color = "black"),axis.title=element_text(size=10))
+```
+
+#save dichotomized article*topic matrix
+```{r}
+write.csv(matrixArtAndTopicDiscr, file = paste0("matrixArticleAndTopicDiscretized", Sys.Date(), ".csv"), fileEncoding="UTF-8")
+```
+
+
+
+#add cluster label to transaction
+```{r}
+matrixArtAndTopicDF=as.data.frame(matrixArtAndTopicDiscr)
+
+clusterLabelDF=matrix(nrow = length(kmeanDocModel$cluster), ncol = length(kmeanDocModel$size))
+for (i in 1: length(kmeanDocModel$size))
+{
+  x=kmeanDocModel$cluster==i
+  clusterLabelDF[,i]=x
+  #clusterName=paste0("cluster_", i)
+  #matrixArtAndTopicDF=cbind(matrixArtAndTopicDF, list(as.character(i), x))
+  #matrixArtAndTopicDF$clusterName=modelKmeans$cluster==i
+}
+
+matrixArtAndTopicDF=cbind(matrixArtAndTopicDF, clusterLabelDF)
+
+```
+
+# get maximum frequent itemsets from whole corpus only from topics
+```{r}
+max.item.set <- apriori(matrixArtAndTopicDF, parameter = list(target = "maximally frequent itemsets", support = 0.001, minlen=2, maxlen=30, maxtime=20,minval=0.0), appearance=list(items=colnames(matrixArtAndTopicDiscr)))
+length(max.item.set)
+
+#save maximum frequent itemsets
+write(x=max.item.set, file = paste0("maximallyFrequentItemSetsWithSupportMin0.001.", Sys.Date(), ".csv"), quote=T, sep=",", fileEncoding="UTF-8")
+```
+
+#F-mesure Evaluation of rules
+##Induce rules 
+```{r}
+transactions= as(matrixArtAndTopicDF, "transactions")
+n=length(transactions)
+rules = arules::apriori(transactions, parameter=list(support=0.004, confidence=0, minlen=2, maxlen=20, target="rules", arem="chi2", aval=T, maxtime=20,minval=0.0), appearance=list(lhs=colnames(matrixArtAndTopicDiscr), rhs=unique(kmeanDocModel$cluster)))
+length(rules)
+```
+
+##Compute precision, recall and Fmesure of rules
+```{r}
+clusterSize.each.rule=getClusterSizeOfEveryRule(kmeanDocModel$size, rules)
+
+#compute precision, recall and Fmesure
+other.eval.metric=interestMeasure(rules, transactions = transactions)
+antecedentCount=other.eval.metric$coverage*n
+precisionRules=other.eval.metric$count/antecedentCount
+recallRules=other.eval.metric$count/clusterSize.each.rule
+fMesure=2*((precisionRules*recallRules)/(precisionRules+recallRules))
+
+RulesPrecisionsRecallFmesure=cbind(precision=precisionRules, recall=recallRules, fmesure=fMesure)%>%as.data.frame(.)
+colnames(RulesPrecisionsRecallFmesure)=c("precision", "recall", "fMesure")
+plot(fMesure)
+```
+
+###save eval by rule
+```{r}
+
+```
+
+
+##Declare function
+Paralized version of function for Computing micro-averages over document clusters
+https://cran.r-project.org/web/packages/future.apply/vignettes/future.apply-1-overview.html
+```{r}
+
+getMicroAveragesOverRuleConsequentParal<-function(kmeanDocModel, rules){
+
+  library("future.apply")
+  library(arules)
+  plan(multiprocess, workers = 7) ## Run in parallel on local computer
+  #consequentSize=kmeanDocModel$size
+  k=kmeanDocModel$size %>% length(.)
+  
+  eval.by.cluster=future_lapply((1:k), function(x){
+  
+    #initialize df
+    eval.by.cluster_k=data.frame(consequentSize=integer(1), antecedantSize=integer(1), tp=double(1), tn=double(1), fp=double(1), fn=double(1), numberRules=integer(1), precision=double(1), recall=double(1), fMesure=double(1), mcc=double(1))
+    
+    idRuleWithconsequent=rules@rhs %in% as.character(x)
+    rules.for.k=rules[idRuleWithconsequent]
+    
+    supportTransactionOfCluster=which(kmeanDocModel$cluster==x)
+    
+    #when the total number of rules is small, it may not have any rule for a particular cluster
+    if (length(rules.for.k)==0){
+      eval.by.cluster_k[1, ]=rep(0, ncol(eval.by.cluster_k))
+      eval.by.cluster_k$fn[1]=length(supportTransactionOfCluster)
+      eval.by.cluster_k$tn[1]=length(transactions)-length(supportTransactionOfCluster)
+      eval.by.cluster_k$consequentSize[1]=length(supportTransactionOfCluster)
+    }
+    else{
+      listOfsupportTransacOfRules=arules::supportingTransactions(rules.for.k, transactions = transactions) %>% as(., "list") %>% unlist(.) %>% unique(.) %>% as.integer(.)
+      
+      transAsList=as(transactions, "list")
+      list.ofid=lapply((as(lhs(rules.for.k), "list")), function(x){
+        list.of.id.x=lapply(x, function(y){
+          grep(y, transAsList, fixed = T)
+        })
+        list.of.id.x=Reduce(base::intersect, list.of.id.x)
+        })
+      list.ofid=Reduce(union, list.ofid) %>%unique(.)
+      
+      #populate de df
+      eval.by.cluster_k$consequentSize[1]=length(supportTransactionOfCluster)
+      eval.by.cluster_k$tp[1]=length(listOfsupportTransacOfRules)
+      eval.by.cluster_k$antecedantSize[1]=length(list.ofid)
+      eval.by.cluster_k$fp[1]=eval.by.cluster_k$antecedantSize[1]-eval.by.cluster_k$tp[1]
+      eval.by.cluster_k$fn[1]=eval.by.cluster_k$consequentSize[1]-eval.by.cluster_k$tp[1]
+      eval.by.cluster_k$tn[1]=length(kmeanDocModel$cluster)-(eval.by.cluster_k$tp[1]-eval.by.cluster_k$fp[1]-eval.by.cluster_k$fn[1])
+      eval.by.cluster_k$numberRules[1]=length(rules.for.k)
+      eval.by.cluster_k$precision[1]=eval.by.cluster_k$tp[1]/eval.by.cluster_k$antecedantSize[1]
+      eval.by.cluster_k$recall[1]=eval.by.cluster_k$tp[1]/eval.by.cluster_k$consequentSize[1]
+      eval.by.cluster_k$fMesure[1]=2*((eval.by.cluster_k$precision[1]*eval.by.cluster_k$recall[1])/(eval.by.cluster_k$precision[1]+eval.by.cluster_k$recall[1]))
+      eval.by.cluster_k$mcc[1]=matthewsCorr(tp = eval.by.cluster_k$tp[1], tn = eval.by.cluster_k$tn[1], fp = eval.by.cluster_k$fp[1], fn = eval.by.cluster_k$fn[1])
+    }
+    #return the current df
+    eval.by.cluster_k
+  
+  })
+  
+  #rbind all df
+  eval.by.cluster=do.call(rbind, eval.by.cluster)
+  return (eval.by.cluster)
+
+}
+```
+
+
+##evaluate global fmesure of rules set, from different values of min-rule-Fmesure
+```{r}
+#set range of F-mesures
+valuesOfMinThreshold=seq(0.0, to = max(fMesure), by = 0.05)
+
+#initialize dataframe
+consequentAnalysis=data.frame(threshold=double(length(valuesOfMinThreshold)), numberOfRules=integer(length(valuesOfMinThreshold)), recall=double(length(valuesOfMinThreshold)), precision=double(length(valuesOfMinThreshold)), fMesure=double(length(valuesOfMinThreshold)))
+
+list.of.global.eval=vector(mode = "list", length = length(valuesOfMinThreshold))
+
+#ce test fonctionne
+#resultsTest=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules)
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=valuesOfMinThreshold[i]
+  print(paste0("min f-mesure: ", x))
+  consequentAnalysis$threshold[i]=x
+  rules.interest.i=rules[fMesure>=x]
+  isMax=is.maximal(rules.interest.i)
+  #rules.interest.i=rules.interest.i[isMax]
+  print(paste0("number of rules: ", length(rules.interest.i)))
+  consequentAnalysis$numberOfRules[i]=length(rules.interest.i)
+  
+  list.of.global.eval[[i]]=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules.interest.i)
+  
+}
+
+#calculate global scores for every treshold
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=list.of.global.eval[[i]]
+  tp=sum(x$tp)
+  tn=sum(x$tn)
+  fp=sum(x$fp)
+  fn=sum(x$fn)
+  precision=tp/(tp+fp)
+  recall=tp/(tp+fn)
+  
+  consequentAnalysis$precision[i]=precision
+  consequentAnalysis$recall[i]=recall
+  consequentAnalysis$fMesure[i]=2*((precision*recall)/(precision+recall))
+  
+}
+
+```
+###Save results by threshold
+```{r}
+saveRDS(consequentAnalysis, paste0("RulesEvaluationFromMinFmesure.", Sys.Date(),".rds"))
+evalAnalysisBasedOnMinFmesure=consequentAnalysis
+#evalAnalysisBasedOnMinFmesure=readRDS(paste0("RulesEvaluationFromMinFmesure.", Sys.Date(),".rds"))
+plot(evalAnalysisBasedOnMinFmesure$threshold, evalAnalysisBasedOnMinFmesure$fMesure)
+write.table(x = evalAnalysisBasedOnMinFmesure, file = paste0("evalAnalysisBasedOnMinFmesure.", Sys.Date(), ".csv"), sep = ",", fileEncoding = "UTF-8")
+```
+
+
+###save results by threshold by cluster
+```{r}
+#threshold.i=which(valuesOfMinThreshold==0.3)
+
+n=nrow(list.of.global.eval[[1]])
+list.of.global.eval.2=list.of.global.eval
+#add threshold and idcluster
+for (i in 1: length(valuesOfMinThreshold)){
+  list.of.global.eval.2[[i]]$threshold=rep(valuesOfMinThreshold[i],n)
+  list.of.global.eval.2[[i]]$id.cluster=seq(1:length(kmeanDocModel$size))
+}
+
+df.eval.by.threshold.by.cluster=data.table::rbindlist(list.of.global.eval.2)
+write.csv(x = df.eval.by.threshold.by.cluster, file = paste0("df.eval.by.threshold.by.cluster.", Sys.Date(), ".csv"), sep = ",", fileEncoding = "UTF-8")
+```
+
+
+##evaluate global fmesure of rules set, from different values of min-support
+not used anymore
+
+```{r}
+evalValues=other.eval.metric$support
+#set range of F-mesures
+valuesOfMinThreshold=seq(0.004, to = max(other.eval.metric$support), by = 0.002)
+
+#initialize dataframe
+evalAnalysisBasedOnMinSupport=data.frame(threshold=double(length(valuesOfMinThreshold)), numberOfRules=integer(length(valuesOfMinThreshold)), recall=double(length(valuesOfMinThreshold)), precision=double(length(valuesOfMinThreshold)), fMesure=double(length(valuesOfMinThreshold)))
+
+list.of.global.eval=vector(mode = "list", length = length(valuesOfMinThreshold))
+
+#ce test fonctionne
+#resultsTest=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules)
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=valuesOfMinThreshold[i]
+  print(paste0("min support: ", x))
+  evalAnalysisBasedOnMinSupport$threshold[i]=x
+  rules.interest.i=rules[evalValues>=x]
+  isMax=is.maximal(rules.interest.i)
+  rules.interest.i=rules.interest.i[isMax]
+  print(paste0("number of rules: ", length(rules.interest.i)))
+  evalAnalysisBasedOnMinSupport$numberOfRules[i]=length(rules.interest.i)
+  
+  list.of.global.eval[[i]]=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules.interest.i)
+  
+}
+
+#calculate global scores for every treshold
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=list.of.global.eval[[i]]
+  tp=sum(x$tp)
+  tn=sum(x$tn)
+  fp=sum(x$fp)
+  fn=sum(x$fn)
+  precision=tp/(tp+fp)
+  recall=tp/(tp+fn)
+  
+  evalAnalysisBasedOnMinSupport$precision[i]=precision
+  evalAnalysisBasedOnMinSupport$recall[i]=recall
+  evalAnalysisBasedOnMinSupport$fMesure[i]=2*((precision*recall)/(precision+recall))
+  
+}
+
+saveRDS(evalAnalysisBasedOnMinSupport, "RulesEvaluationFromMinSupport.rds")
+evalAnalysisBasedOnMinSupport=readRDS("RulesEvaluationFromMinSupport.rds")
+plot(evalAnalysisBasedOnMinSupport$threshold, evalAnalysisBasedOnMinSupport$fMesure)
+write.table(x = evalAnalysisBasedOnMinSupport, file = "evalAnalysisBasedOnMinSupport.csv", sep = ",", fileEncoding = "UTF-8")
+```
+
+##evaluate global fmesure of rules set, from different values of phi
+not used anymore
+```{r}
+evalValues=other.eval.metric$phi
+#set range of F-mesures
+valuesOfMinThreshold=seq(0, to = max(evalValues), by = 0.05)
+
+#initialize dataframe
+evalAnalysisBasedOnMinPhi=data.frame(threshold=double(length(valuesOfMinThreshold)), numberOfRules=integer(length(valuesOfMinThreshold)), recall=double(length(valuesOfMinThreshold)), precision=double(length(valuesOfMinThreshold)), fMesure=double(length(valuesOfMinThreshold)))
+
+list.of.global.eval=vector(mode = "list", length = length(valuesOfMinThreshold))
+
+#ce test fonctionne
+#resultsTest=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules)
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=valuesOfMinThreshold[i]
+  print(paste0("min support: ", x))
+  evalAnalysisBasedOnMinPhi$threshold[i]=x
+  rules.interest.i=rules[evalValues>=x]
+  isMax=is.maximal(rules.interest.i)
+  rules.interest.i=rules.interest.i[isMax]
+  print(paste0("number of rules: ", length(rules.interest.i)))
+  evalAnalysisBasedOnMinPhi$numberOfRules[i]=length(rules.interest.i)
+  
+  list.of.global.eval[[i]]=getMicroAveragesOverRuleConsequentParal(kmeanDocModel = kmeanDocModel, rules = rules.interest.i)
+  
+}
+
+#calculate global scores for every treshold
+
+for (i in 1: length(valuesOfMinThreshold)){
+  x=list.of.global.eval[[i]]
+  tp=sum(x$tp)
+  tn=sum(x$tn)
+  fp=sum(x$fp)
+  fn=sum(x$fn)
+  precision=tp/(tp+fp)
+  recall=tp/(tp+fn)
+  
+  evalAnalysisBasedOnMinPhi$precision[i]=precision
+  evalAnalysisBasedOnMinPhi$recall[i]=recall
+  evalAnalysisBasedOnMinPhi$fMesure[i]=2*((precision*recall)/(precision+recall))
+  
+}
+
+saveRDS(evalAnalysisBasedOnMinPhi, "RulesEvaluationFromMinPhi.rds")
+
+evalAnalysisBasedOnMinPhi=readRDS("RulesEvaluationFromMinPhi.rds")
+plot(evalAnalysisBasedOnMinPhi$threshold, evalAnalysisBasedOnMinPhi$fMesure)
+
+write.table(x = evalAnalysisBasedOnMinPhi, file = "evalAnalysisBasedOnMinPhi.csv", sep = ",", fileEncoding = "UTF-8")
+```
+
+
+##select rules by F-mesure
+```{r}
+
+#threshold selected=0.3
+index.rules.interest=RulesPrecisionsRecallFmesure$fMesure>.3
+rules.interest=rules[index.rules.interest]
+RulesPrecisionsRecallFmesure.interest=RulesPrecisionsRecallFmesure[index.rules.interest,]
+
+#e=RulesPrecisionsRecallFmesure[RulesPrecisionsRecallFmesure$fmesure>.3,]
+
+length(rules.interest)
+isMax=is.maximal(rules.interest)
+rules.interest=rules.interest[isMax]
+RulesPrecisionsRecallFmesure.interest=RulesPrecisionsRecallFmesure.interest[isMax,]
+#e=e[isMax,]
+length(rules.interest)
+
+saveRDS(rules.interest, file = "rules.interest.96.rds")
+
+rules.interest.df=inspect(rules.interest, ruleSep = "=", itemSep = " ; ", setStart = "", setEnd ="", linebreak = FALSE)
+id.rule=as(rules.interest, "data.frame")%>%rownames(.)
+
+#rules.interest.df=as(rules.interest, "data.frame")
+rules.interest.df=cbind(rules.interest.df, RulesPrecisionsRecallFmesure.interest)
+rules.interest.df$id.rule=id.rule
+saveRDS(rules.interest.df, "rules.interest.96.df.rds")
+
+write.csv(rules.interest.df, file = paste0("rules.interest.96.df.", Sys.Date(), ".csv"), fileEncoding = "UTF-8")
+
+
+#save all rules with attribute indicating if selected
+rules.all.df=inspect(rules, ruleSep = "=", itemSep = " ; ", setStart = "", setEnd ="", linebreak = FALSE)
+rules.all.df$id.rule=as(rules, "data.frame")%>%rownames(.)
+rules.all.df$is.selected=sapply(rules.all.df$id.rule, function(id){
+  id %in% rules.interest.df$id.rule
+})
+rules.all.df=cbind(rules.all.df, RulesPrecisionsRecallFmesure)
+
+write.csv(rules.all.df, file = paste0("rules.all.df.", Sys.Date(), ".csv"), fileEncoding = "UTF-8")
+
+
+
+#save results
+arules::write(rules.interest, file = paste0( "rules.interest.", Sys.Date(), ".csv"), sep = ",")
+
+write.table(e, paste0("evalPrecisionRecallFMesureFor96Rules", Sys.Date(), ".csv"), sep = ",")
+
+```
+
+##retrieve all document by rules
+```{r}
+selected.rules=rules.interest #use rule object to analys all rules
+
+library("future.apply")
+plan(multiprocess, workers = 7)
+k=kmeanDocModel$size %>% length(.)
+valid.support.doc.by.rule=future_lapply((1:k), function(x){
+  idRuleWithconsequent=selected.rules@rhs %in% as.character(x)
+  rules.for.k=selected.rules[idRuleWithconsequent]
+  supportTransactionOfCluster=which(kmeanDocModel$cluster==x)
+  
+  listOfsupportTransacOfRules=arules::supportingTransactions(rules.for.k, transactions = transactions[supportTransactionOfCluster]) %>% as(., "list")# %>% unlist(.) %>% unique(.) %>% as.integer(.)
+      
+  #transAsList=as(transactions, "list")
+})
+test=unlist(valid.support.doc.by.rule)
+doc.to.rule.df=data.frame(id.doc=test, rule=names(test))
+
+library(data.table)
+doc.to.rule.df=data.table::as.data.table(doc.to.rule.df)
+#add key for further super fast subsetting
+setkey(doc.to.rule.df, id.doc)
+
+doc.to.rule.with.info=lapply(unique(doc.to.rule.df$id.doc), function(i){
+  #print(i)
+  info.i=article.info.df[i,c(2,3,5)]
+  rules.to.i=doc.to.rule.df[.(i),]
+  x=data.frame(rules.to.i, author= rep(info.i$authors, nrow(rules.to.i)), date=rep(info.i$date, nrow(rules.to.i)), title=rep(info.i$title, nrow(rules.to.i)))
+  #x=rep(info.i, 10)#%>%rbindlist(.)
+  x
+})
+
+xxx=rbindlist(doc.to.rule.with.info)
+
+######################################
+#seems that on very large list, rbindlist needs to be called several times on splited lists.
+#In these cases, the code below will do the job
+#x=rbindlist(doc.to.rule.with.info[1:2000])
+#xx=do.call("rbind", doc.to.rule.with.info[2001:length(doc.to.rule.with.info)])
+#xxx=rbind(x, xx)
+#####################################
+```
+###save
+```{r}
+write.csv(x = xxx, file = paste0("valide.supporting.document.of.rulesOfInterest96.", Sys.Date(), ".csv"), sep = ",", fileEncoding = "UTF-8")
+```
+
+
+##Retreive all documents for selected rules 
+
+
+
+#end
