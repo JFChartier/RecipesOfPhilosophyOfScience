@@ -1,0 +1,150 @@
+---
+title: "ClusteringAnalysisOfTopics"
+author: "Jean-Francois Chartier"
+date: "13 novembre 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#functions
+```{r}
+normerVecteur <- function(x) 
+{
+  if(sum(x)==0)
+    return (x)
+  else 
+    return (x / sqrt(sum(x^2)))
+  
+}
+```
+
+#read topic*article matrix
+```{r}
+matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
+
+#read topic names and category labels
+matrixTopicLabels = data.table::fread("label_topics_by_christophe_180227_180611.csv", header=T, sep = ",", encoding = "UTF-8")
+topicLabels=matrixTopicLabels$Topic[matrixTopicLabels$retained=="yes"]
+categories=matrixTopicLabels$Category[matrixTopicLabels$retained=="yes"]
+```
+
+#set colors by category
+
+```{r}
+library(RColorBrewer)
+library(magrittr)
+n <- length(unique(categories))
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+#by selectin id 2 and 5, we subset palette Dark2 and Pastel2
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors[c(2,5)], rownames(qual_col_pals[c(2,5),]))) %>% unique()
+col_vector=col_vector[1: n]
+uniqueCat=unique(categories)
+colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+```
+deprecated. For more than 10 colors, the demarcation is not good enought
+```{r}
+library(RColorBrewer)
+library(magrittr)
+n <- length(unique(categories))
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals))) %>% unique()
+col_vector=col_vector[5: (n+4)]
+uniqueCat=unique(categories)
+colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+```
+
+#read topic*sentence matrix
+```{r}
+fileTopicSentence = "C:/Users/Chartier/Google Drive/Ordinateur/Projet JSTOR/Analyses/Davide's data/phrase_topic/phrase_topic.csv"
+matrixSentenceTopic = data.table::fread(fileTopicSentence, header=T, sep = ",", encoding = "UTF-8")
+matrixSentenceTopic$V1=NULL
+matrixTopicSentence=t(matrixSentenceTopic)
+matrixTopicSentence=matrixTopicSentence[matrixTopicLabels$retained=="yes",]
+
+```
+
+#Filter sentence with low variance
+```{r}
+sentenceVar=apply(matrixTopicSentence, MARGIN = 2, function(x) var(x))
+sentenceWithVar=sentenceVar>0.0001
+matrixTopicSentence1=matrixTopicSentence[, sentenceWithVar]
+
+matrixTopicAndSentenceNorm <- (t(apply(matrixTopicSentence1, MARGIN = 1, FUN = function(x) normerVecteur(x))))
+```
+
+#SVD
+```{r}
+svdOfTopic=RSpectra::svds(matrixTopicAndSentenceNorm, 20)
+reducedSVDTopic=svdOfTopic$u %*% solve(diag((svdOfTopic$d)))
+plot(reducedSVDTopic[,1:2])
+
+```
+
+##plot SVD 
+```{r}
+library(ggplot2)
+ggplot2::ggplot(data.frame(x=reducedSVDTopic[,1], y=reducedSVDTopic[,2], Category=categories), aes(x=x, y=y, color=Category)) +
+  geom_point(size = I(5))+
+  scale_color_manual(values=c(colorOfTopic))+
+  geom_text(aes(label=topicLabels),color = "black",  size=2, hjust=0, vjust=0)
+```
+
+
+#t-SNE on topic*sentence matrix
+matrix m * n of m topics and n sentences
+```{r}
+library(Rtsne)
+set.seed(9)
+
+#incredible tse!
+tsne_topic.perplex5.expand12.norm.theta05.late40k.withSVD5.150k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=5, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=12, stop_lying_iter=40000, max_iter=150000)
+
+tsne_topic.perplex5.expand12.norm.theta05.late40k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=5, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=12, stop_lying_iter=40000, max_iter=300000)
+
+tsne_topic.perplex10.expand12.norm.theta05.late40k.withSVD10.150k= Rtsne(reducedSVDTopic[,1:10], check_duplicates=FALSE, pca=F,perplexity=10, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=12, stop_lying_iter=40000, max_iter=150000)
+
+tsne_topic.perplex5.expand12.norm.theta05.late40k.withSVD20.150k= Rtsne(reducedSVDTopic, check_duplicates=FALSE, pca=F,perplexity=5, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=12, stop_lying_iter=40000, max_iter=150000)
+
+tsne_topic.perplex5.expand6.norm.theta05.late40k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=5, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=40000, max_iter=300000)
+
+tsne_topic.perplex10.expand6.norm.theta05.late150k.withSVD10.300k= Rtsne(reducedSVDTopic[,1:10], check_duplicates=FALSE, pca=F,perplexity=10, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+tsne_topic.perplex5.expand6.norm.theta05.late150k.withSVD10.300k= Rtsne(reducedSVDTopic[,1:10], check_duplicates=FALSE, pca=F,perplexity=5, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+tsne_topic.perplex6.expand6.norm.theta05.late150k.withSVD10.300k= Rtsne(reducedSVDTopic[,1:10], check_duplicates=FALSE, pca=F,perplexity=6, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+tsne_topic.perplex15.expand6.norm.theta05.late150k.withSVD10.300k= Rtsne(reducedSVDTopic[,1:10], check_duplicates=FALSE, pca=F,perplexity=15, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+#this is the best result so far. The trick here is to use only the main dimensions of the SVD, for instance 5 here, but to use a relatively high perplexity score (which correspond to the KKN). Few dimensions focus on main features but high perplexity prevent the map to collapse into several smal insignificant clusters 
+tsne_topic.perplex15.expand6.norm.theta05.late150k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=15, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+tsne_topic.perplex10.expand6.norm.theta05.late150k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=10, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+tsne_topic.perplex20.expand6.norm.theta05.late150k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=20, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
+
+```
+
+#plot
+```{r}
+library(ggplot2)
+
+x=tsne_topic.perplex15.expand6.norm.theta05.late150k.withSVD5.300k
+
+ggplot2::ggplot(data.frame(x=x$Y[,1], y=x$Y[,2], Category=categories), aes(x=x, y=y, color=Category)) +
+  geom_point(size = I(10), alpha=0.6)+
+  scale_color_manual(values=c(colorOfTopic))+
+  geom_text(aes(label=topicLabels),color = "black",  size=4, hjust=0, vjust=0)+
+  ggtitle("tsne_topic.perplex10.expand6.norm.theta05.late150k.withSVD5.300k")+
+  theme_light()+
+  theme(legend.position = "bottom", legend.text=element_text(size=8), legend.spacing.y = unit(0.1, "cm"), legend.key.size = unit(0.1, "cm"), legend.box = "horizontal")+
+  guides(shape = guide_legend(override.aes = list(size = 7)), color = guide_legend(override.aes = list(size = 7)))
+  
+
+
+```
+
