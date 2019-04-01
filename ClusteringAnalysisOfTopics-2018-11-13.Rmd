@@ -128,6 +128,11 @@ tsne_topic.perplex10.expand6.norm.theta05.late150k.withSVD5.300k= Rtsne(reducedS
 tsne_topic.perplex20.expand6.norm.theta05.late150k.withSVD5.300k= Rtsne(reducedSVDTopic[,1:5], check_duplicates=FALSE, pca=F,perplexity=20, theta=0.05, dims=2, pca_center=F, pca_scale=F, exaggeration_factor=6, stop_lying_iter=150000, max_iter=300000)
 
 ```
+##save
+```{r}
+saveRDS(tsne_topic.perplex15.expand6.norm.theta05.late150k.withSVD5.300k, "tsne_topic.perplex15.expand6.norm.theta05.late150k.withSVD5.300k.rds")
+```
+
 
 #plot
 ```{r}
