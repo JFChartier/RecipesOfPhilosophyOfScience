@@ -163,6 +163,7 @@ ggplot2::ggplot(data.frame(x=tseResult$Y[,1], y=tseResult$Y[,2], Category=as.cha
 ##read kmeans clusters
 ```{r}
 kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
+
 ```
 
 
@@ -204,24 +205,31 @@ View(k_most_important_features_par_cluster(15, t(matrixClusterByTopic)), title =
 
 ## barplot of topic distribution per cluster
 ```{r}
+library(dplyr)
+#set shorter topic labels
+colnames(matrixClusterByTopic)=matrixTopicLabels$Topic[matrixTopicLabels$retained=="yes"]
+#set same colors as TSE plot
+color.of.cluster=c(setColorsPalette17(as.character(kmeanDocModel$cluster)))
 
 clusterByTopic.df=as.data.frame(matrixClusterByTopic)
-
 clusterByTopic.df$id.cluster=rownames(matrixClusterByTopic)
+clusterByTopic.df$cl.color=unique(cbind(color.of.cluster, rownames(color.of.cluster)))
 
+#create long data format
+clusterByTopic.df=reshape2::melt(clusterByTopic.df, id.vars = c("id.cluster", "cl.color"), variable.name = "topic", value.name = "topic.weight")
 
-clusterByTopic.df=reshape2::melt(clusterByTopic.df, id.vars = c("id.cluster"), variable.name = "topic", value.name = "topic.weight")
-
+#select only top-5 topics by cluster
 top.topics.by.cluster <- clusterByTopic.df %>%
   group_by(id.cluster) %>%
-  top_n(10, topic.weight) %>%
+  top_n(5, topic.weight) %>%
   ungroup() %>%
   arrange(id.cluster, desc(topic.weight))
 
+#plot
 top.topics.by.cluster %>%
   mutate(topic = reorder(topic, topic.weight)) %>%
-  ggplot(aes(topic, topic.weight, fill = factor(id.cluster))) +
-  geom_col(show.legend = FALSE) +
+  ggplot(data = ., aes(x = topic, y = topic.weight)) +
+  geom_col(show.legend = T, fill=top.topics.by.cluster$cl.color, color="black", size=0.1)+
   facet_wrap(~ id.cluster, scales = "free", ncol=3) +
   coord_flip()+
   #geom_text(color = "black",  size=1, hjust=0, vjust=0)+
@@ -230,6 +238,13 @@ top.topics.by.cluster %>%
   theme(axis.text=element_text(size=8, colour = "black"),
         axis.title=element_text(size=8, colour = "black"),
         title=element_text(size=8, colour = "black"))
+
+
+
+#+scale_fill_manual("legend", values = (unique(color.of.cluster)%>%set_names(., names(color.of.cluster)%>%unique())))
+  #scale_color_manual(name="clusters", values=cl.color)
+
+#unique(color.of.cluster)%>%set_names(., names(color.of.cluster)%>%unique())
 ```
 
 
