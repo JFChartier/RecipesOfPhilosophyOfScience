@@ -109,7 +109,7 @@ ArtAndTopicDiscr.df=lapply(ArtAndTopicDiscr.df, function(x) as.character(x))%>%a
 ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
 
 set.seed(123)
-rpartTree <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, xval=100), parms = list(split="information"))
+rpartTree <- rpart::rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, xval=100), parms = list(split="information"))
 View(rpartTree$variable.importance)
 
 plotcp(rpartTree)
@@ -124,13 +124,14 @@ rpartTree=prune(rpartTree,cp=min.cp)
 
 ##Evaluating Rpart
 ```{r}
+
 data_ctrl <- trainControl(method = "cv", number = 10)
 
 x=ArtAndTopicDiscr.df[, -which(colnames(ArtAndTopicDiscr.df) == "cluster")]
 y=ArtAndTopicDiscr.df$cluster
 
 #https://stackoverflow.com/questions/36781755/how-to-specify-minbucket-in-caret-train-for
-rpart.cv.fit <- train(y = y, x = x, method = "rpart", trControl = data_ctrl,parms=list(split='information'), tuneGrid = data.frame(cp = c(min.cp)), control = rpart.control(minsplit = 10, minbucket = 10))
+rpart.cv.fit <- caret::train(y = y, x = x, method = "rpart", trControl = data_ctrl,parms=list(split='information'), tuneGrid = data.frame(cp = c(min.cp)), control = rpart.control(minsplit = 10, minbucket = 10))
 
 
 ```
@@ -138,7 +139,7 @@ rpart.cv.fit <- train(y = y, x = x, method = "rpart", trControl = data_ctrl,parm
 ## Retrive full optimized tree
 ```{r}
 #learn on full data with optimized parameters
-rpartTree.full <- rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = min.cp, xval=1), parms = list(split="information"))
+rpartTree.full <- rpart::rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=10, cp = min.cp, xval=1), parms = list(split="information"))
 
 tree.pred=predict(rpartTree.full, newdata = ArtAndTopicDiscr.df, type="class")
 eval<-caret::confusionMatrix(data=tree.pred, reference=ArtAndTopicDiscr.df$cluster, mode="everything")
@@ -180,6 +181,7 @@ library(shiny)
 library(colourpicker)
 library(shinyWidgets)
 my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
+
 
 
 treeVis=visTree(rpartTree.full, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")

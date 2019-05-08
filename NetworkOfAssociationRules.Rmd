@@ -22,6 +22,9 @@ kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
 topic.frequency=readRDS("frequency.of.dicho.topic.rds")
 topic.frequency <- rapply(topic.frequency, function(x) as.character(x), classes="factor", how="replace")
 
+map.cluster.color=c(setColorsPalette17(as.character(kmeanDocModel$cluster)))%>%cbind(names(.),.)%>%unique(.)
+
+
 ```
 
 #prepare data
@@ -81,6 +84,15 @@ myNodeValue=myNodeSize
 #node color. set only topic node colors
 myNodeColor=NA
 myNodeColor[id.node.topic]="black"
+myNodeColor[id.node.assoc]=lapply(node.type.as.group[id.node.assoc], function(x){
+  i=which(map.cluster.color[,1]==x)
+  map.cluster.color[i,2]
+})%>%unlist(.)
+myNodeColor[id.node.cluster]=lapply(node.type.as.group[id.node.cluster], function(x){
+  i=which(map.cluster.color[,1]==x)
+  map.cluster.color[i,2]
+})%>%unlist(.)
+
 
 #node id
 myNodeId=ig_df$vertices$name

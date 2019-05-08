@@ -86,9 +86,6 @@ setColorsPalette17<-function(categories){
 
 #Read article*topic matrix
 ```{r}
-#matrixArtTopicDicho=readRDS("matrixArtTopicDicho.rds")
-#read matrix Pr(topic|article)
-#matrixArtAndTopic=readRDS("rawMatrixArticleAndTopic.rds")
 matrixArtAndTopic=readRDS("matrix4602Art126AverageTopic.rds")
 
 #read topic names and category labels
@@ -124,18 +121,18 @@ ggplot2::qplot(tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k$Y[,1], t
 
 #evaluate kmeans
 ```{r}
-library(clValid)
-set.seed(1)
-
-intern <- clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="internal", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
-summary(intern)
-optimalScores(intern)
-plot(intern@measures[3,,1])
-
-stability.cluster=clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="stability", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
-summary(stability.cluster)
-optimalScores(stability.cluster)
-plot(stability.cluster@measures[4,,1])
+# library(clValid)
+# set.seed(1)
+# 
+# intern <- clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="internal", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
+# summary(intern)
+# optimalScores(intern)
+# plot(intern@measures[3,,1])
+# 
+# stability.cluster=clValid(reducedSVDDoc[,1:15], nClust =  c(2: 20), clMethods=c("kmeans"), validation="stability", metric="euclidean", maxitems = nrow(reducedSVDDoc[,1:15]), iter.max=100)
+# summary(stability.cluster)
+# optimalScores(stability.cluster)
+# plot(stability.cluster@measures[4,,1])
 ```
 
 
@@ -143,13 +140,22 @@ plot(stability.cluster@measures[4,,1])
 #kmean on full space
 ```{r}
 
-tseResult = readRDS("tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k.2019-01-16.rds")
-
 #best result with k=17
 set.seed(123)
 kmeanDocModel=kmeans(reducedSVDDoc[,1:15], centers = 17, nstart = 500, iter.max = 500)
 
 saveRDS(kmeanDocModel, paste0("bestKmeanDocModelOnSVDSpace", Sys.Date(), ".rds"))
+
+```
+
+##Plot cluster from kmeans and TSE
+```{r}
+kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
+
+
+tseResult = readRDS("tsne_doc.50.expand12.norm.theta05.late40k.withSVD15.150k.2019-01-16.rds")
+
+ggplot2::qplot(tseResult$Y[,1], tseResult$Y[,2],main = "t-Distributed Stochastic Neighbor Embedding of document space", xlab = "Embedding 1", ylab = "Embedding 2")
 
 ggplot2::ggplot(data.frame(x=tseResult$Y[,1], y=tseResult$Y[,2], Category=as.character(kmeanDocModel$cluster)), aes(x=x, y=y, color=Category)) +
   geom_point(size = I(2),alpha = 0.8)+
@@ -158,11 +164,6 @@ ggplot2::ggplot(data.frame(x=tseResult$Y[,1], y=tseResult$Y[,2], Category=as.cha
   theme(legend.position = "bottom", legend.box = "horizontal", legend.justification = "center")
 
 
-```
-
-##read kmeans clusters
-```{r}
-kmeanDocModel=readRDS("bestKmeanDocModelOnSVDSpace2019-01-16.rds")
 
 ```
 
@@ -239,12 +240,6 @@ top.topics.by.cluster %>%
         axis.title=element_text(size=8, colour = "black"),
         title=element_text(size=8, colour = "black"))
 
-
-
-#+scale_fill_manual("legend", values = (unique(color.of.cluster)%>%set_names(., names(color.of.cluster)%>%unique())))
-  #scale_color_manual(name="clusters", values=cl.color)
-
-#unique(color.of.cluster)%>%set_names(., names(color.of.cluster)%>%unique())
 ```
 
 
