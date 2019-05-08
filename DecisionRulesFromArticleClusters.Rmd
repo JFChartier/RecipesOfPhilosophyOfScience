@@ -62,6 +62,18 @@ setColorsPaletteFor25AndLess<-function(categories){
   colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
   return(colorOfTopic)
 }
+
+
+setColorsPalette17<-function(categories){
+  n <- length(unique(categories))
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  #by selectin id 2 and 5, we subset palette Dark2 and Pastel2
+  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors[c(2,4,5)], rownames(qual_col_pals[c(2,4,5),]))) %>% unique()
+  col_vector=col_vector[1: n]
+  uniqueCat=unique(categories)
+  colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+  return(colorOfTopic)
+}
 ```
 
 
@@ -110,9 +122,9 @@ ArtAndTopicDiscr.df$cluster=as.factor(kmeanDocModel$cluster)
 
 set.seed(123)
 rpartTree <- rpart::rpart(cluster ~ ., data = ArtAndTopicDiscr.df, method = "class", control = rpart.control(minbucket=10, maxdepth=30, cp = 00, xval=100), parms = list(split="information"))
-View(rpartTree$variable.importance)
+#View(rpartTree$variable.importance)
 
-plotcp(rpartTree)
+#plotcp(rpartTree)
 
 tableCP=rpartTree$cptable
 
@@ -238,14 +250,15 @@ library(rattle)
 fancyRpartPlot(rpartTree, type=5, sub=NULL)
 ```
 
+
 #visNetwork
 ```{r}
 library(visNetwork)
 library(shiny)
 library(colourpicker)
 library(shinyWidgets)
-my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
-
+#my.colors=c(setColorsPaletteFor25AndLess(as.character(kmeanDocModel$cluster)))
+my.colors=c(setColorsPalette17(as.character(kmeanDocModel$cluster)))
 
 treeVis=visTree(rpart.cv.fit$finalModel, data = solder, nodesPopSize = TRUE, minNodeSize = 10, maxNodeSize = 30, height = "800px", edgesFontAlign = "horizontal", colorY = unique(my.colors), fallenLeaves=F, shapeVar= "icon", colorEdges="lightgray", legend=F, nodesFontSize=20, colorVar="black")
 

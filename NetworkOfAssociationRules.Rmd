@@ -36,6 +36,21 @@ topic.frequency$proportion=sapply(topic.frequency$frequency.topic, function(x){
 
 ```
 
+#function for colors
+```{r}
+setColorsPalette17<-function(categories){
+  n <- length(unique(categories))
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  #by selectin id 2 and 5, we subset palette Dark2 and Pastel2
+  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors[c(2,4,5)], rownames(qual_col_pals[c(2,4,5),]))) %>% unique()
+  col_vector=col_vector[1: n]
+  uniqueCat=unique(categories)
+  colorOfTopic=sapply(categories, function(x) col_vector[which(uniqueCat==x)])
+  return(colorOfTopic)
+}
+```
+
+
 
 #Plot selected rules
 based on that script: https://github.com/datastorm-open/visNetwork/issues/6
@@ -124,8 +139,10 @@ network.visualizer=visNetwork(nodes = myNodes, edges = myEdges, width = "100%", 
 
 
 saveRDS(network.visualizer, "network.visualizer.rds")
+visSave(network.visualizer, file = "network.of.associative.rules.html")
 ```
 
+#Create shiny app
 ```{r}
 require(shiny)
 
